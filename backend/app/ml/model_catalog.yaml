@@ -1,0 +1,219 @@
+# PixelForge model catalogue (master plan §7E.2).
+#
+# The frontend renders itself from this file via GET /api/v1/models.
+# Adding a model = one entry here + one adapter file. Zero frontend changes.
+#
+# `status` here is the DECLARED status. Effective status is recomputed at runtime from
+# adapter.healthcheck() — a model declared `available` whose weights are missing is
+# reported as `unavailable` with a reason. Never the other way around.
+
+contract_version: "0.1"
+
+models:
+  - key: bicubic
+    display_name: "Bicubic (baseline)"
+    adapter: "app.ml.adapters.bicubic_adapter:BicubicAdapter"
+    status: available
+    is_baseline: true
+    scale_factor: 4
+    input_gsd_m: 10.0
+    output_gsd_m: 2.5
+    input_bands: [B02, B03, B04, B08]
+    output_bands: [B02, B03, B04, B08]
+    requires_gpu: false
+    supports_uncertainty: false
+    supports_sampling: false
+    default_tile_px: 256
+    tile_overlap_px: 16
+    max_input_px: 2048
+    best_for: []
+    description: >-
+      Classical bicubic interpolation. Reference baseline only: it enlarges the image
+      but adds no information that was not in the original observation. Every model is
+      scored against this.
+    citation_url: ""
+
+  - key: sen2sr
+    display_name: "SEN2SR"
+    adapter: "app.ml.adapters.sen2sr_adapter:Sen2SRAdapter"
+    # Declared `available`; runtime healthcheck downgrades it when the repo/weights
+    # are absent. See docs/DECISIONS.md ADR-004.
+    status: available
+    is_baseline: false
+    scale_factor: 4
+    input_gsd_m: 10.0
+    output_gsd_m: 2.5          # ⚠️ UNVERIFIED — must be confirmed by measuring a real output
+    input_bands: [B02, B03, B04, B08]
+    output_bands: [B02, B03, B04, B08]
+    requires_gpu: true
+    supports_uncertainty: false
+    supports_sampling: false
+    default_tile_px: 128
+    tile_overlap_px: 16
+    max_input_px: 512          # ⚠️ UNVERIFIED — set from measured peak VRAM
+    best_for: [agricultural, mixed]
+    description: >-
+      Sentinel-2 native super-resolution with a spectral hard-constraint module.
+      The only model in the PixelForge ML repository with committed weights.
+    citation_url: ""
+    verification:
+      verified_against_repo: false
+      blocking_questions: ["A2", "A4", "A5", "A9", "B7", "B8", "B11", "C1", "D2"]
+
+  - key: sen2sr_cnn
+    display_name: "SEN2SR-CNN (SEN2SRLite RGBN x4)"
+    adapter: "app.ml.adapters.sen2sr_hf_adapter:Sen2SRCNNAdapter"
+    status: available
+    is_baseline: false
+    scale_factor: 4
+    input_gsd_m: 10.0
+    output_gsd_m: 2.5
+    input_bands: [B02, B03, B04, B08]
+    output_bands: [B02, B03, B04, B08]
+    requires_gpu: false
+    supports_uncertainty: false
+    supports_sampling: false
+    default_tile_px: 128
+    tile_overlap_px: 16
+    max_input_px: 512
+    best_for: []
+    description: >-
+      WEO-SAS/sen2sr "main" branch (SEN2SRLite, CNN/SPAN backbone): Sentinel-2 RGBN
+      10m -> 2.5m super-resolution with a Fourier hard-constraint module enforcing
+      spectral consistency with the observed low-resolution input. Ships as a
+      self-contained package (config.json + safetensors weights); no external ML
+      repo needed. Runs on CPU (plain Conv2d backbone) or GPU.
+    citation_url: "https://huggingface.co/WEO-SAS/sen2sr"
+    verification:
+      verified_against_repo: true
+
+  - key: mamba_sen2sr_finetuned
+    display_name: "SEN2SR-Mamba (fine-tuned, epoch 3)"
+    adapter: "app.ml.adapters.sen2sr_hf_adapter:MambaSen2SRAdapter"
+    # Declared `available`; runtime healthcheck downgrades it if mamba_ssm (a CUDA-only
+    # dependency with no CPU fallback) is not installed on the GPU worker. See
+    # ml_weights_sen2sr/mamba_sen2sr_finetuned/config.json for the hard_constraint and
+    # checkpoint-format notes, and requirements/ml.txt for the install caveats.
+    status: available
+    is_baseline: false
+    scale_factor: 4
+    input_gsd_m: 10.0
+    output_gsd_m: 2.5
+    input_bands: [B02, B03, B04, B08]
+    output_bands: [B02, B03, B04, B08]
+    requires_gpu: true
+    supports_uncertainty: false
+    supports_sampling: false
+    default_tile_px: 128
+    tile_overlap_px: 16
+    max_input_px: 512
+    best_for: []
+    description: >-
+      WEO-SAS/sen2sr "mamba-rgbn-x4" backbone (VMamba/SS2D state-space model),
+      fine-tuned checkpoint at training epoch 3. Same Fourier hard-constraint and
+      RGBN 10m -> 2.5m task as sen2sr_cnn, higher-capacity backbone. Requires
+      mamba_ssm built against CUDA on the GPU worker.
+    citation_url: "https://huggingface.co/WEO-SAS/sen2sr"
+    verification:
+      verified_against_repo: false
+      blocking_questions: ["mamba_ssm installed and built against the GPU worker's CUDA version?"]
+
+  - key: ldsr_s2
+    display_name: "LDSR-S2"
+    adapter: null
+    status: unavailable
+    reason: WEIGHTS_EXTERNAL
+    scale_factor: 4
+    input_gsd_m: 10.0
+    output_gsd_m: 2.5
+    input_bands: [B02, B03, B04, B08]
+    output_bands: [B02, B03, B04, B08]
+    requires_gpu: true
+    supports_uncertainty: false
+    supports_sampling: true     # if latent-diffusion, enables U2 sampling-variance uncertainty
+    best_for: [urban]
+    description: >-
+      Latent-diffusion super-resolution for Sentinel-2. Nine experiment scripts exist in
+      the ML repository but weights are not committed. Not yet integrated.
+
+  - key: satlas
+    display_name: "Satlas ESRGAN"
+    adapter: null
+    status: unavailable
+    reason: WEIGHTS_EXTERNAL
+    scale_factor: 8
+    input_gsd_m: 10.0
+    output_gsd_m: 1.25
+    input_bands: [B04, B03, B02]     # RGB-only — breaks naive comparison with 4-band models
+    output_bands: [B04, B03, B02]
+    requires_gpu: true
+    supports_uncertainty: false
+    best_for: [forest, natural]
+    description: >-
+      ESRGAN-based super-resolution from the Satlas project. Two benchmark scripts exist.
+      Band set and scale factor differ from SEN2SR, so comparison requires a common grid.
+
+  - key: mamba_sr
+    display_name: "Mamba SR"
+    adapter: null
+    status: unavailable
+    reason: NOT_IMPLEMENTED
+    requires_gpu: true
+    supports_uncertainty: false
+    best_for: [coastal, arid, complex]
+    description: >-
+      Proposed in the project design. No implementation, scripts or weights exist in the
+      ML repository. Listed for transparency; shown as unavailable in the interface.
+
+  - key: wsx4_spatrad
+    display_name: "WSX4-SPATRAD"
+    adapter: "app.ml.adapters.wsx4_spatrad_adapter:Wsx4SpatradAdapter"
+    status: available
+    is_baseline: false
+    scale_factor: 4
+    input_gsd_m: 10.0
+    output_gsd_m: 2.5
+    input_bands: [B02, B03, B04, B08]
+    output_bands: [B02, B03, B04, B08]
+    requires_gpu: false             # ONNX Runtime CPU — no GPU worker needed
+    supports_uncertainty: false
+    supports_sampling: false
+    default_tile_px: 512
+    tile_overlap_px: 0
+    max_input_px: 512
+    weights_filename: "wsx4_spatrad.onnx"
+    margin_px: 130
+    best_for: []
+    description: >-
+      General-purpose Sentinel-2 super-resolution (WSX4-SPATRAD). Ships as a self-contained
+      ONNX export; preprocessing (raw-DN input, margin-based context padding) confirmed
+      against the model author's own reference evaluation notebook.
+    citation_url: ""
+    verification:
+      verified_against_repo: true
+
+  - key: wsx4_spatrad_mumbai_ft
+    display_name: "WSX4-SPATRAD (Mumbai fine-tune)"
+    adapter: "app.ml.adapters.wsx4_spatrad_adapter:Wsx4SpatradAdapter"
+    status: available
+    is_baseline: false
+    scale_factor: 4
+    input_gsd_m: 10.0
+    output_gsd_m: 2.5
+    input_bands: [B02, B03, B04, B08]
+    output_bands: [B02, B03, B04, B08]
+    requires_gpu: false
+    supports_uncertainty: false
+    supports_sampling: false
+    default_tile_px: 512
+    tile_overlap_px: 0
+    max_input_px: 512
+    weights_filename: "wsx4_spatrad_mumbai_ft.onnx"
+    margin_px: 130
+    best_for: [urban]
+    description: >-
+      WSX4-SPATRAD fine-tuned on Mumbai-area imagery. Same architecture and preprocessing
+      as the general-purpose model; expect better results specifically over that region.
+    citation_url: ""
+    verification:
+      verified_against_repo: true

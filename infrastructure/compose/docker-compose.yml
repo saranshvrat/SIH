@@ -1,0 +1,143 @@
+# PixelForge — full stack.
+#
+#   docker compose -f infrastructure/compose/docker-compose.yml up -d --build
+#
+# The GPU worker is behind the `gpu` profile so the stack still starts on a machine
+# with no NVIDIA runtime; the bicubic baseline keeps the pipeline fully working.
+#   ...up -d --profile gpu      to enable SEN2SR
+
+name: pixelforge
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: pixelforge
+      POSTGRES_PASSWORD: pixelforge
+      POSTGRES_DB: pixelforge
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pixelforge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly no --save ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"        # console: http://localhost:9001
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../../backend
+      dockerfile: docker/Dockerfile.api
+    env_file: ../../.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://pixelforge:pixelforge@postgres:5432/pixelforge
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      STORAGE_DRIVER: s3
+      S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+      minio:    { condition: service_healthy }
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../../backend
+      dockerfile: docker/Dockerfile.worker
+    env_file: ../../.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://pixelforge:pixelforge@postgres:5432/pixelforge
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      STORAGE_DRIVER: s3
+      S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    restart: unless-stopped
+
+  beat:
+    build:
+      context: ../../backend
+      dockerfile: docker/Dockerfile.worker
+    command: ["celery", "-A", "app.tasks.celery_app", "beat", "-l", "info"]
+    env_file: ../../.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://pixelforge:pixelforge@postgres:5432/pixelforge
+      CELERY_BROKER_URL: redis://redis:6379/1
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  gpu-worker:
+    profiles: ["gpu"]
+    build:
+      context: ../../backend
+      dockerfile: docker/Dockerfile.gpu
+    env_file: ../../.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://pixelforge:pixelforge@postgres:5432/pixelforge
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      STORAGE_DRIVER: s3
+      S3_ENDPOINT_URL: http://minio:9000
+      ML_REPO_PATH: /ml
+    volumes:
+      - ../../ml:/ml:ro          # the ML repository, read-only
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../../frontend
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  miniodata:

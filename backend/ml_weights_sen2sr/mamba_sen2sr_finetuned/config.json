@@ -1,0 +1,54 @@
+{
+    "architecture": "mamba",
+    "srmodel_type": "nonreference",
+    "in_channels": 4,
+    "out_channels": 4,
+    "scaling_factor": 4,
+    "upscale": 4,
+    "img_size": [
+        128,
+        128
+    ],
+    "embed_dim": 96,
+    "depths": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+    ],
+    "num_heads": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+    ],
+    "mlp_ratio": 4,
+    "attention_type": "sigmoid_02",
+    "upsampler": "pixelshuffle",
+    "resi_connection": "1conv",
+    "operation_attention": "sum",
+    "patch_size": 128,
+    "overlap": 32,
+    "p_low": 0.0,
+    "p_high": 1.0,
+    "normalization_factor": 10000,
+    "hard_constraint_bands": null,
+
+    "_comment_weights_file": "Corrected from the original template's 'model.safetensor' (not shipped) to the actual fine-tuned checkpoint file that was provided.",
+    "weights_file": "mamba_head_epoch_3.pth",
+
+    "_comment_checkpoint_state_dict_key": "mamba_head_epoch_3.pth is a full PyTorch TRAINING checkpoint (epoch/model_state_dict/optimizer_state_dict/loss), not a bare safetensors state_dict. The adapter unwraps this key before calling load_state_dict().",
+    "checkpoint_state_dict_key": "model_state_dict",
+    "checkpoint_epoch": 3,
+
+    "hard_constraint_file": "hard_constraint.safetensor",
+    "_comment_hard_constraint": "No hard_constraint file was shipped with this fine-tune. HardConstraint (sen2sr.models.tricks.HardConstraint) is a fixed, non-learned Fourier low-pass mask that depends only on (output_size, scale_factor) -- not on backbone weights. This file is byte-identical to sen2sr_cnn's hard_constraint.safetensor, which is a valid substitute because both configs share patch_size=128 and scaling_factor=4 (output size 512x512, verified against the shipped tensor shape). Replace this file if a fine-tune-specific hard_constraint.safetensor is ever produced.",
+
+    "weights_file_original_variant": "mamba-rgbn-x4",
+    "description": "SEN2SR RGBN x4 (Mamba backbone), fine-tuned checkpoint at epoch 3. Base architecture from tacofoundation/SEN2SR 'mamba-rgbn-x4', repackaged in the WEO-SAS/sen2sr HuggingFace layout.",
+    "variant": "mamba-rgbn-x4-finetuned"
+}

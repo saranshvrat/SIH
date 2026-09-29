@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root { color-scheme: dark; }
+  html { -webkit-font-smoothing: antialiased; }
+  body { @apply bg-void text-bright; overflow-x: hidden; }
+
+  ::selection { background: rgba(56, 208, 216, 0.25); }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: theme("colors.abyss"); }
+  ::-webkit-scrollbar-thumb {
+    background: theme("colors.line-bright"); border-radius: 5px;
+    border: 2px solid theme("colors.abyss");
+  }
+  ::-webkit-scrollbar-thumb:hover { background: theme("colors.muted"); }
+
+  :focus-visible { outline: 2px solid theme("colors.signal.DEFAULT"); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* A faint coordinate grid — reads as instrumentation, not decoration. */
+  .grid-field {
+    background-image:
+      linear-gradient(to right, rgba(56,208,216,0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(56,208,216,0.045) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+  .panel {
+    @apply bg-panel/80 border border-line rounded-lg backdrop-blur-sm;
+  }
+  .label-mono {
+    @apply font-mono text-2xs uppercase tracking-[0.14em] text-muted;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5
+           text-sm font-medium transition-all duration-200
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-signal text-void hover:bg-signal-glow
+           shadow-[0_0_24px_-6px_rgba(56,208,216,0.5)];
+  }
+  .btn-ghost {
+    @apply btn border border-line-bright text-bright hover:border-signal/60 hover:bg-raised;
+  }
+  .hairline { @apply border-t border-line; }
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-md border border-line bg-void px-2.5 py-1.5 text-xs text-bright
+           transition-colors focus:border-signal/60 focus:outline-none;
+    color-scheme: dark;
+  }
+}

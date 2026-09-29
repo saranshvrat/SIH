@@ -1,0 +1,33 @@
+# Core API
+fastapi==0.115.4
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+pydantic-settings==2.6.0
+python-multipart==0.0.12
+
+# Database
+SQLAlchemy==2.0.36
+alembic==1.13.3
+psycopg[binary]==3.2.3
+
+# Async processing
+celery==5.4.0
+redis==5.2.0
+
+# Object storage
+boto3==1.35.54
+
+# Geospatial — rasterio bundles its own GDAL wheels
+rasterio==1.4.2
+pyproj==3.7.0
+shapely==2.0.6
+
+# Imaging / numerics
+numpy==2.1.3
+Pillow==11.0.0
+
+# Utilities
+httpx==0.27.2
+structlog==24.4.0
+PyYAML==6.0.2
+onnxruntime==1.19.2

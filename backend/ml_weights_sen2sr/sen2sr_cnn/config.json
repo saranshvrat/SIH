@@ -1,0 +1,22 @@
+{
+    "architecture": "cnn",
+    "srmodel_type": "nonreference",
+    "in_channels": 4,
+    "out_channels": 4,
+    "feature_channels": 24,
+    "scaling_factor": 4,
+    "upscale": 4,
+    "num_blocks": 6,
+    "bias": true,
+    "train_mode": false,
+    "patch_size": 128,
+    "overlap": 32,
+    "p_low": 0.0,
+    "p_high": 1.0,
+    "normalization_factor": 10000,
+    "hard_constraint_bands": null,
+    "weights_file": "model.safetensor",
+    "hard_constraint_file": "hard_constraint.safetensor",
+    "description": "SEN2SRLite RGBN x4: Sentinel-2 RGBN 10m -> 2.5m super-resolution (4x, CNN)",
+    "variant": "main"
+}

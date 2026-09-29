@@ -1,0 +1,64 @@
+# secrets — NEVER commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# node
+node_modules/
+dist/
+.vite/
+*.local
+
+# runtime data — ephemeral by design
+data/
+*.db
+*.sqlite3
+backend/out/
+/out/
+
+# model weights: large, and owned by the ML repository
+*.safetensor
+*.safetensors
+*.pth
+*.ckpt
+weights/
+
+# generated outputs
+*.tif
+*.tiff
+!backend/tests/fixtures/**/*.tif
+frontend/public/hero/*.webp
+frontend/public/hero/SOURCE.txt
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+
+.venv/
+__pycache__/
+*.pyc
+.env
+*.db
+data/
+node_modules/
+
+backend.zip

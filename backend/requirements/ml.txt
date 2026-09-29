@@ -1,0 +1,30 @@
+# Installed ONLY in the GPU worker image -- torch is ~2.5 GB and the API does not
+# import it. Pin the CUDA build that matches your driver.
+#
+# NOTE: torch/torchvision were split out to requirements/torch.txt -- install that
+# FIRST (see its header) so mamba-ssm's build step can see an already-installed
+# torch. Then run this file:
+#   pip install -r requirements/ml.txt --no-build-isolation
+-r base.txt
+safetensors==0.6.2
+
+# --- sen2sr_cnn (app/ml/adapters/sen2sr_hf_adapter.py) ----------------------
+# Lightweight, pure-Python/torch. Verified installable + working on CPU; no
+# extra CUDA toolchain needed.
+sen2sr==0.8.5
+einops>=0.7
+timm>=0.9
+tqdm
+
+# --- mamba_sen2sr_finetuned (same adapter file, Mamba backbone) -------------
+# Native CUDA extensions (selective-scan kernels), no CPU fallback. Requires:
+#   - torch already installed (see requirements/torch.txt, install that first)
+#   - a matching CUDA toolkit if pip falls back to a source build (no prebuilt
+#     cp313 wheel exists for these versions as of writing -- expect a source
+#     build; needs nvcc + a C++ compiler toolchain on whatever machine runs this)
+#   - Linux/WSL2 strongly recommended: mamba-ssm's own package classifiers list
+#     Unix only, and its GitHub releases never publish win_amd64 wheels, only
+#     linux_x86_64 -- native Windows here means compiling from source with MSVC,
+#     which is fragile. WSL2 + Ubuntu avoids that entirely.
+mamba-ssm==2.2.2
+causal-conv1d==1.4.0

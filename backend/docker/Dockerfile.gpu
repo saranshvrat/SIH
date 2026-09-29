@@ -1,0 +1,38 @@
+# GPU worker: inference ONLY.
+#
+# --pool=solo and --concurrency 1 are deliberate: two jobs must never contend for
+# the same VRAM. This single constraint prevents most demo-day OOM failures.
+FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      git libexpat1 && rm -rf /var/lib/apt/lists/*
+
+COPY requirements/ ./requirements/
+RUN pip install -r requirements/base.txt safetensors==0.6.2 \
+      sen2sr==0.8.5 "einops>=0.7" "timm>=0.9" tqdm
+
+# mamba_sen2sr_finetuned (app/ml/adapters/sen2sr_hf_adapter.py:MambaSen2SRAdapter)
+# additionally needs mamba-ssm + causal-conv1d, which compile native CUDA kernels
+# with no CPU fallback. This base image is a "-runtime" tag and likely lacks nvcc
+# needed to build them from source -- switch to the matching "-devel" tag, or
+# install matching prebuilt wheels from https://github.com/state-spaces/mamba/releases.
+# See requirements/ml.txt for the full explanation. Left commented out so this
+# build doesn't fail on infra that hasn't made that call yet:
+# RUN pip install --no-build-isolation mamba-ssm==2.2.2 causal-conv1d==1.4.0
+
+COPY app/ ./app/
+COPY scripts/ ./scripts/
+
+# The ML repository is MOUNTED, never copied: it belongs to the ML team and is
+# pinned by commit, so the image never carries a stale fork of their code.
+ENV ML_REPO_PATH=/ml PYTHONPATH=/app:/ml
+
+# ml_weights_sen2sr/ (sen2sr_cnn + mamba_sen2sr_finetuned config.json + weights)
+# follows the same convention as ./ml_weights for the ONNX models: mount it as a
+# volume rather than baking ~66 MB of weights into the image. See
+# app/core/config.py:SEN2SR_HF_WEIGHTS_DIR (default "./ml_weights_sen2sr").
+
+CMD ["celery", "-A", "app.tasks.celery_app", "worker", \
+     "-Q", "gpu", "--pool=solo", "--concurrency", "1", "-l", "info"]

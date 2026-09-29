@@ -1,0 +1,7 @@
+# Install FIRST, on its own. mamba-ssm's setup.py imports torch at build time,
+# so torch must already be resolvable before mamba-ssm/causal-conv1d install.
+#
+# Run:
+#   pip install -r requirements/torch.txt --index-url https://download.pytorch.org/whl/cu124
+torch>=2.5.1
+torchvision>=0.20.1

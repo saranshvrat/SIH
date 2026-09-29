@@ -1,0 +1,3 @@
+# Optional. Without these the report endpoint returns JSON and says why.
+-r base.txt
+weasyprint==63.0
